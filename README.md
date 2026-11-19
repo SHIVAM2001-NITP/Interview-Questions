@@ -1,578 +1,864 @@
-# Java Interview Questions: 100 Tricky Questions with Answers
+# 82 Tricky Java Interview Questions ("Can we...?") with Answers and Code
 
-A study guide of tricky Java interview questions, grouped by the pattern each one tests.
+Every question from the video **"82 Tricky Java Interview Questions | Most Candidates Get These Wrong"** by GenZ Career (https://youtu.be/glsIlGLglzQ), in the video's order (Q1 to Q82), grouped by the pattern each one tests.
 
-> **Source note:** This is inspired by the topic of the video *"82 Tricky Java Interview Questions | Most Candidates Get These Wrong"* (GenZ Career, https://youtu.be/glsIlGLglzQ). It is **not** a transcript of that video. The video's transcript was not accessible, so the questions and answers below are my own compilation of the classic tricky Java topics. Verify against the video if you need an exact match.
+How this file was made:
+- The answers follow the explanations given in the video (taken from its auto-generated transcript, with transcription slips fixed, such as "abset" for abstract and "surprised exception" for suppressed exception).
+- The code examples are added here so each answer can be run and checked. Lines marked *(added)* are extra notes that are not in the video.
+- Some answers depend on the Java version (Java 7, 8, 9, 25, 26). The version is stated where it matters.
 
 ## Contents
 
-1. [Strings](#1-strings-q1-q10)
-2. [Primitives, Wrappers and Numbers](#2-primitives-wrappers-and-numbers-q11-q25)
-3. [OOP, Initialization and Overloading](#3-oop-initialization-and-overloading-q26-q42)
-4. [Exceptions and finally](#4-exceptions-and-finally-q43-q50)
-5. [Collections](#5-collections-q51-q66)
-6. [Generics](#6-generics-q67-q70)
-7. [Concurrency](#7-concurrency-q71-q84)
-8. [JVM, Memory and Class Loading](#8-jvm-memory-and-class-loading-q85-q90)
-9. [Modern Java (8 to 21)](#9-modern-java-8-to-21-q91-q100)
+1. [main() and source files (Q1-Q5)](#1-main-and-source-files-q1-q5)
+2. [Inheritance, interfaces and abstract classes (Q6-Q16)](#2-inheritance-interfaces-and-abstract-classes-q6-q16)
+3. [Constructors (Q17-Q21)](#3-constructors-q17-q21)
+4. [Enums (Q22-Q24)](#4-enums-q22-q24)
+5. [Strings (Q25-Q29)](#5-strings-q25-q29)
+6. [Immutability (Q30-Q32)](#6-immutability-q30-q32)
+7. [Exceptions and finally (Q33-Q38)](#7-exceptions-and-finally-q33-q38)
+8. [Collections (Q39-Q48)](#8-collections-q39-q48)
+9. [Generics (Q49-Q51)](#9-generics-q49-q51)
+10. [Threads and synchronization (Q52-Q62)](#10-threads-and-synchronization-q52-q62)
+11. [JVM, garbage collection and memory (Q63-Q67)](#11-jvm-garbage-collection-and-memory-q63-q67)
+12. [Lambdas, streams, Optional, records and var (Q68-Q75)](#12-lambdas-streams-optional-records-and-var-q68-q75)
+13. [Singleton, serialization and class loaders (Q76-Q79)](#13-singleton-serialization-and-class-loaders-q76-q79)
+14. [Production pitfalls (Q80-Q82)](#14-production-pitfalls-q80-q82)
 
 ---
 
-## 1. Strings (Q1-Q10)
+## 1. main() and source files (Q1-Q5)
 
-### Q1. What does this print?
+### Q1. Can we run a Java main program without `public`, `static` and `void`?
+**Answer: Yes, from Java 25.** In older versions `public static void main(String[] args)` was mandatory. Java 25 allows an instance `main` with no `public`, no `static` and no `String[]` parameter.
 ```java
-String s1 = "hello";
-String s2 = "hello";
-String s3 = new String("hello");
-System.out.println(s1 == s2);        // ?
-System.out.println(s1 == s3);        // ?
-System.out.println(s1.equals(s3));   // ?
-System.out.println(s1 == s3.intern());// ?
+// Java 25+
+class Hello {
+    void main() {
+        System.out.println("Hello");
+    }
+}
 ```
-**Answer:** `true`, `false`, `true`, `true`. Literals share one object in the string pool. `new String(...)` always creates a separate heap object. `equals` compares content. `intern()` returns the pooled instance.
 
-### Q2. How many objects does `new String("abc")` create?
-**Answer:** Up to two: the literal `"abc"` in the string pool (if not already there) and a new `String` object on the heap.
-
-### Q3. What does this print, and why?
+### Q2. Can we write a Java file with no class in it?
+**Answer: Yes, from Java 25.** These are called *compact source files*. We write methods directly in the file, and the compiler puts everything into an implicitly declared class.
 ```java
-String a = "a";
-String c1 = "a" + "b";
-String c2 = a + "b";
-final String f = "a";
-String c3 = f + "b";
-System.out.println(c1 == "ab"); // true
-System.out.println(c2 == "ab"); // false
-System.out.println(c3 == "ab"); // true
+// Hello.java (Java 25+), run with: java Hello.java
+void main() {
+    System.out.println("No class wrapper needed");
+}
 ```
-**Answer:** Concatenation of compile-time constants is folded by the compiler into the literal `"ab"`. `a` is not final, so `a + "b"` is computed at runtime and creates a new object. A `final` variable initialized with a constant is itself a constant, so `c3` is folded.
 
-### Q4. Why is `String` immutable?
-**Answer:** String pool sharing is only safe if strings cannot change. Immutability also makes `hashCode` cacheable (good for `HashMap` keys), makes strings thread-safe, and protects security-sensitive values such as class names, file paths and URLs.
-
-### Q5. `String` vs `StringBuilder` vs `StringBuffer`?
-**Answer:** `String` is immutable. `StringBuilder` is mutable and not thread-safe (fast). `StringBuffer` is mutable and synchronized (slower, rarely needed). Use `StringBuilder` for building strings in loops.
-
-### Q6. What does this print?
+### Q3. Can we override the `main` method?
+**Answer: No.** `main` is static, and static methods are never overridden. Writing the same `main` in a child class is **method hiding**. Which one runs is decided at compile time by the class name, not at runtime by the object.
 ```java
-String s = "java";
-s.concat(" rocks");
-s.toUpperCase();
-System.out.println(s);
+class Parent { public static void main(String[] a) { System.out.println("Parent main"); } }
+class Child extends Parent { public static void main(String[] a) { System.out.println("Child main"); } }
+// java Parent -> Parent main
+// java Child  -> Child main   (hiding, not overriding)
 ```
-**Answer:** `java`. String methods return new strings. The results were discarded.
 
-### Q7. What happens when you `switch` on a `null` String?
-**Answer:** `NullPointerException`. The switch calls `hashCode()`/`equals()` on the value. Check for null first.
-
-### Q8. Can two different strings have the same `hashCode`?
-**Answer:** Yes. `"Aa".hashCode() == "BB".hashCode()` (both 2112). Equal hash codes do not imply equal objects, which is why `equals` is still needed.
-
-### Q9. What do these print?
+### Q4. Can the JVM call our overloaded `main`?
+**Answer: No.** We can overload `main` as many times as we like and it compiles, but the JVM looks for one exact signature, `main(String[])`, and ignores the others. To run an overloaded version, call it yourself from the real `main`.
 ```java
-System.out.println('a' + 'b');          // 195
-System.out.println("" + 'a' + 'b');     // ab
-System.out.println('a' + 'b' + "");     // 195
-System.out.println(1 + 2 + "3" + 4 + 5);// 3345
-System.out.println((char) ('a' + 1));   // b
+public class Demo {
+    public static void main(String[] args) {
+        System.out.println("real main");
+        main(5);                      // we must call the overload ourselves
+    }
+    static void main(int x) { System.out.println("overloaded main " + x); }
+}
 ```
-**Answer:** `char + char` is numeric addition (int). Once a `String` is involved, `+` becomes concatenation, evaluated left to right.
 
-### Q10. Why is `char[]` preferred over `String` for passwords?
-**Answer:** A `String` stays in memory (possibly in the pool) until garbage collected and cannot be wiped. A `char[]` can be overwritten with zeros right after use.
+### Q5. Can we print something without writing a `main` method?
+**Answer: Only up to Java 6.** Until Java 6, a `System.out.println` in a `static` block ran at class-loading time and printed before the JVM looked for `main`. From Java 7 onwards the JVM checks for `main` first, so we get a `NoSuchMethodError` and nothing prints.
+```java
+public class Demo {
+    static { System.out.println("static block"); }   // Java 6: prints. Java 7+: never reached
+}
+```
 
 ---
 
-## 2. Primitives, Wrappers and Numbers (Q11-Q25)
+## 2. Inheritance, interfaces and abstract classes (Q6-Q16)
 
-### Q11. What does this print?
+### Q6. Can a class extend itself?
+**Answer: No.** The compiler reports a *cyclic inheritance* error. If `A extends A`, creating an `A` would need the parent constructor, which is `A` itself, and it would go on forever.
 ```java
-Integer a = 127, b = 127;
-Integer c = 128, d = 128;
-System.out.println(a == b); // true
-System.out.println(c == d); // false
-```
-**Answer:** `Integer.valueOf` caches values from -128 to 127. Outside that range, boxing creates new objects, so `==` compares different references. Always use `equals` for wrappers.
-
-### Q12. Is `0.1 + 0.2 == 0.3`?
-**Answer:** No. `0.1 + 0.2` is `0.30000000000000004` because binary floating point cannot represent these decimals exactly. Use `BigDecimal` (constructed from strings) for money, or compare with a tolerance.
-
-### Q13. What does `Integer.MAX_VALUE + 1` give? What about `Math.abs(Integer.MIN_VALUE)`?
-**Answer:** `Integer.MIN_VALUE` (overflow wraps silently). `Math.abs(Integer.MIN_VALUE)` is still `-2147483648` because +2147483648 does not fit in an int. Use `Math.addExact` to detect overflow.
-
-### Q14. What is the result of `5 / 2`, `5 / 2.0`, `(double) (5 / 2)`?
-**Answer:** `2`, `2.5`, `2.0`. Integer division truncates before the cast happens.
-
-### Q15. Will this compile?
-```java
-byte b = 10;
-b = b + 1;   // ?
-b += 1;      // ?
-```
-**Answer:** `b = b + 1` fails: `b + 1` is an `int`. `b += 1` compiles because compound assignment includes an implicit narrowing cast.
-
-### Q16. What do these division results print?
-```java
-System.out.println(1.0 / 0);   // Infinity
-System.out.println(0.0 / 0);   // NaN
-System.out.println(1 / 0);     // ArithmeticException
-```
-**Answer:** Floating-point division by zero yields `Infinity` or `NaN`. Integer division by zero throws `ArithmeticException`.
-
-### Q17. Is `Double.NaN == Double.NaN`?
-**Answer:** `false` for the primitive comparison. `Double.valueOf(Double.NaN).equals(Double.NaN)` is `true`. Use `Double.isNaN(x)` to test.
-
-### Q18. What is the bug here?
-```java
-long micros = 24 * 60 * 60 * 1000 * 1000;
-System.out.println(micros); // 500654080
-```
-**Answer:** The multiplication happens in `int` and overflows before widening to `long`. Fix: `24L * 60 * 60 * 1000 * 1000`.
-
-### Q19. What does `i = i++` do?
-```java
-int i = 5;
-i = i++;
-System.out.println(i); // 5
-int j = 5;
-j = j++ + ++j;
-System.out.println(j); // 12
-```
-**Answer:** `i++` returns the old value (5), increments, then the assignment overwrites `i` with 5. For `j`: `j++` gives 5 (j becomes 6), `++j` gives 7, sum is 12.
-
-### Q20. What does this print?
-```java
-Object o = true ? 1 : 2.0;
-System.out.println(o); // 1.0
-```
-**Answer:** `1.0`. In a ternary with numeric operands, binary numeric promotion converts both branches to `double`.
-
-### Q21. Why can this throw `NullPointerException`?
-```java
-Integer a = null;
-int b = true ? a : 0; // NPE
-```
-**Answer:** With one `Integer` and one `int` operand, the ternary's type is `int`, so `a` is auto-unboxed, and unboxing `null` throws NPE.
-
-### Q22. What does this print?
-```java
-System.out.println(Long.valueOf(1).equals(1));   // false
-System.out.println(Long.valueOf(1).equals(1L));  // true
-```
-**Answer:** `1` is boxed to `Integer`, and `Long.equals` returns false for a non-`Long`.
-
-### Q23. `short s = 1; s = s + 1;` vs `s += 1;`?
-**Answer:** Same as `byte`: the first doesn't compile (int result), the second does (implicit cast).
-
-### Q24. Which overload is called?
-```java
-static void m(long x)    { System.out.println("long"); }
-static void m(Integer x) { System.out.println("Integer"); }
-m(5); // long
-```
-**Answer:** `long`. Overload resolution order: (1) exact/widening, (2) boxing, (3) varargs. Widening `int` to `long` wins over boxing.
-
-### Q25. Which overload is called for `null`?
-```java
-static void m(Object o) { System.out.println("Object"); }
-static void m(String s) { System.out.println("String"); }
-m(null); // String
-```
-**Answer:** `String`, the most specific type. If the overloads were `m(String)` and `m(StringBuilder)`, the call would be ambiguous and fail to compile.
-
----
-
-## 3. OOP, Initialization and Overloading (Q26-Q42)
-
-### Q26. Overloading vs overriding?
-**Answer:** Overloading: same name, different parameters, resolved at compile time by the declared types. Overriding: subclass replaces an instance method with the same signature, resolved at runtime by the actual object type.
-
-### Q27. Can you override a static method? What about fields?
-**Answer:** No. Static methods are hidden, not overridden, and fields are never polymorphic.
-```java
-class P { String name = "P"; static String who() { return "P"; } }
-class C extends P { String name = "C"; static String who() { return "C"; } }
-P p = new C();
-System.out.println(p.name);  // P
-System.out.println(p.who()); // P
+class A extends A { }   // error: cyclic inheritance involving A
 ```
 
-### Q28. What is the initialization order with inheritance?
+### Q7. Can a class extend two classes?
+**Answer: No.** Java does not allow multiple inheritance of classes because of the **diamond problem**. If both parents have the same method, the child has no way to decide which one to inherit.
 ```java
-class Parent {
-    static { System.out.println("Parent static"); }
-    { System.out.println("Parent instance"); }
-    Parent() { System.out.println("Parent ctor"); }
-}
-class Child extends Parent {
-    static { System.out.println("Child static"); }
-    { System.out.println("Child instance"); }
-    Child() { System.out.println("Child ctor"); }
-}
-new Child();
+class C extends A, B { }   // compile error
 ```
-**Answer:** Parent static, Child static, Parent instance, Parent ctor, Child instance, Child ctor. Static blocks run once at class initialization (parent first). Then for each object: parent init blocks and constructor, then child's.
 
-### Q29. What is the danger of calling an overridable method from a constructor?
+### Q8. Can an interface extend multiple interfaces?
+**Answer: Yes.** An interface can extend as many interfaces as it wants. It is allowed here but not for classes because interfaces traditionally had only method declarations: no body, no state, no fields, no constructors, so there was nothing to conflict.
 ```java
-class A { A() { show(); } void show() {} }
-class B extends A {
-    String s = "hi";
-    void show() { System.out.println(s); } // prints null
-}
-new B();
+interface A { void a(); }
+interface B { void b(); }
+interface C extends A, B { }   // valid
 ```
-**Answer:** The parent constructor runs before the child's fields are initialized, so the overridden method sees default values (`null`/`0`).
 
-### Q30. Can a constructor be private? Why?
-**Answer:** Yes. Used for singletons, utility classes, static factory methods and preventing subclassing.
-
-### Q31. Can you override a private method?
-**Answer:** No. Private methods are not inherited. A subclass method with the same name is a brand new method.
-
-### Q32. Abstract class vs interface?
-**Answer:** Abstract classes can hold state and constructors and allow single inheritance. Interfaces define a contract, allow multiple inheritance of type, and since Java 8 can have `default`/`static` methods (and `private` ones since Java 9). Prefer interfaces for capabilities and abstract classes for shared state/behavior.
-
-### Q33. What is the diamond problem and how does Java handle default methods?
+### Q9. Can two interfaces have the same default method?
+**Answer: Yes, but the implementing class will not compile until we fix it.** Default methods (Java 8) brought the diamond problem back. Java handles it by forcing us to decide: the class must override the method itself. Java did not solve the diamond problem, it made us solve it.
 ```java
 interface A { default void hi() { System.out.println("A"); } }
 interface B { default void hi() { System.out.println("B"); } }
 class C implements A, B {
-    public void hi() { A.super.hi(); } // must resolve explicitly
+    @Override public void hi() { A.super.hi(); }   // we must resolve it
 }
 ```
-**Answer:** If two interfaces provide the same default method, the class must override it and may delegate with `Interface.super.method()`. A concrete class method always wins over an interface default.
 
-### Q34. Can you instantiate an abstract class?
-**Answer:** No, but you can create an anonymous subclass: `new AbstractFoo() { ... }`.
+### Q10. Can an interface have private methods?
+**Answer: Yes, from Java 9.** Two default methods often need the same helper code, and before Java 9 there was no way to share it without making it public. Now an interface can have `private` and `private static` methods purely for internal reuse. They are not visible to implementing classes.
+```java
+interface Logger {
+    default void info(String m)  { print("INFO",  m); }
+    default void error(String m) { print("ERROR", m); }
+    private void print(String level, String m) { System.out.println(level + ": " + m); }
+}
+```
 
-### Q35. What rules apply when overriding a method?
-**Answer:** Same signature; return type must be the same or a covariant subtype; visibility cannot be reduced; it cannot throw broader checked exceptions; `final`/`static`/`private` methods cannot be overridden.
+### Q11. Can an interface have a constructor?
+**Answer: No.** A constructor initializes the state of an object. An interface has no state and we can never create an object of an interface directly. Variables declared in an interface are automatically `public static final` constants, initialized once at the interface level.
+```java
+interface Config {
+    int MAX = 10;     // implicitly public static final
+    // Config() { }   // compile error
+}
+```
 
-### Q36. What is a covariant return type?
-**Answer:** An overriding method may return a subtype of the parent's return type, e.g. parent returns `Object`, child returns `String`.
+### Q12. Can an abstract class have a constructor?
+**Answer: Yes.** We cannot create an object of an abstract class, but when a child object is created the parent constructor always runs first. The abstract class constructor initializes the fields the child inherits. If we don't write one, Java adds a default constructor anyway.
+```java
+abstract class Shape {
+    final String name;
+    Shape(String name) { this.name = name; }
+    abstract double area();
+}
+class Circle extends Shape {
+    final double r;
+    Circle(double r) { super("circle"); this.r = r; }
+    double area() { return Math.PI * r * r; }
+}
+```
 
-### Q37. What does `null instanceof Object` return?
-**Answer:** `false`. `instanceof` is always false for `null`.
+### Q13. Can we create an object of an abstract class?
+**Answer: No, not directly.** `new MyAbstract() { ... }` does not create an object of the abstract class. It creates an **anonymous subclass**, and the object belongs to that subclass. So never directly, but always through a subclass.
+```java
+Shape s = new Shape("anon") {
+    double area() { return 0; }
+};
+```
 
-### Q38. What is the `equals`/`hashCode` contract?
-**Answer:** Equal objects must have equal hash codes. `equals` must be reflexive, symmetric, transitive, consistent, and `x.equals(null)` is false. Override both together or hash-based collections break.
+### Q14. Can we override a static method?
+**Answer: No. It is method hiding, not overriding.** Overriding is resolved at runtime by the actual object. Hiding is resolved at compile time by the reference type. With `Parent p = new Child()`, calling the static method runs the parent's version even though the object is a child. That is the opposite of what overriding does.
+```java
+class Parent { static String who() { return "Parent"; } }
+class Child extends Parent { static String who() { return "Child"; } }
+Parent p = new Child();
+System.out.println(p.who());   // Parent
+```
 
-### Q39. Shallow vs deep copy with `clone()`?
-**Answer:** `Object.clone()` copies fields; references are shared (shallow). A deep copy also duplicates the referenced objects. Prefer copy constructors or factory methods over `Cloneable`.
+### Q15. Can we override a private method?
+**Answer: No.** A private method is not even visible to the child class. A method with the same name in the child is treated as a completely new method with no relationship to the parent's. That is why `@Override` fails there.
+```java
+class P { private void m() { } }
+class C extends P {
+    @Override private void m() { }   // error: method does not override a supertype method
+}
+```
 
-### Q40. Static nested vs inner class? Where is the memory-leak risk?
-**Answer:** A static nested class has no reference to the outer instance. An inner (non-static) class holds an implicit reference to the enclosing object, which can keep it alive (a classic leak with long-lived listeners or threads).
-
-### Q41. `final` vs `finally` vs `finalize`?
-**Answer:** `final`: constant/non-overridable/non-extendable. `finally`: block that runs after try/catch. `finalize()`: deprecated for removal (Java 18); use try-with-resources or `Cleaner` instead.
-
-### Q42. Is a `final` reference variable immutable? How do you make an immutable class?
-**Answer:** `final` only prevents reassigning the reference. The object can still change. For an immutable class: make the class `final`, fields `private final`, no setters, defensively copy mutable inputs and outputs. Or use a `record`.
+### Q16. Can a top-level class be private or protected?
+**Answer: No.** A top-level class can only be `public` or default (package-private). `private` means accessible only within the enclosing class, and a top-level class has no enclosing class, so it would be useless because nobody could ever access it.
+```java
+private class A { }     // error: modifier private not allowed here
+protected class B { }   // error: modifier protected not allowed here
+```
 
 ---
 
-## 4. Exceptions and finally (Q43-Q50)
+## 3. Constructors (Q17-Q21)
 
-### Q43. What does this return?
+### Q17. Can a constructor be `final`, `static` or `abstract`?
+**Answer: No, none of the three, and each has a different reason.**
+- `final` is pointless because a constructor is never inherited, so it can never be overridden anyway.
+- `static` is wrong because a constructor initializes an instance and static means no instance.
+- `abstract` means no body, and something with no body can never initialize anything.
+```java
+class A {
+    final A() { }      // error
+    static A() { }     // error
+    abstract A();      // error
+}
+```
+
+### Q18. Can a constructor be private?
+**Answer: Yes, and it is very common.** Nobody outside can create an object directly. That is what we want for a **singleton**, where we control object creation, and for **utility classes** like `Math`, where every method is static and an object makes no sense.
+```java
+final class MathUtil {
+    private MathUtil() { }
+    static int square(int x) { return x * x; }
+}
+```
+
+### Q19. Can a constructor call another constructor?
+**Answer: Yes, with `this(...)`.** This is called **constructor chaining**. A no-argument constructor can call the three-argument one with default values, so the same initialization code is not repeated.
+```java
+class Box {
+    int w, h, d;
+    Box() { this(1, 1, 1); }
+    Box(int w, int h, int d) { this.w = w; this.h = h; this.d = d; }
+}
+```
+
+### Q20. Can we call `this()` and `super()` in the same constructor?
+**Answer: No.** Both want to be the first statement and only one can be first. The logic still works out: if we call `this()`, that other constructor eventually calls `super()`, so the parent is initialized one level down the chain.
+
+**From Java 25, flexible constructor bodies** let us write validation code *before* calling `this()` or `super()`. Earlier that was illegal, so we had to use ugly static helper methods to validate arguments.
+```java
+class Account extends Base {
+    Account(int balance) {
+        if (balance < 0) throw new IllegalArgumentException("negative");   // Java 25: allowed here
+        super(balance);
+    }
+}
+```
+
+### Q21. Can a constructor throw an exception?
+**Answer: Yes, both checked and unchecked.** If someone passes invalid data, we should fail right there rather than create a half-broken object.
+```java
+class User {
+    User(String email) {
+        if (email == null || !email.contains("@"))
+            throw new IllegalArgumentException("invalid email");
+    }
+}
+```
+
+---
+
+## 4. Enums (Q22-Q24)
+
+### Q22. Can an enum have a constructor?
+**Answer: Yes, but it is always private**, whether we write the keyword or not. The constants are fixed and created once when the enum loads, and nobody should be able to create a new one later.
+```java
+enum Level {
+    LOW(1), HIGH(10);
+    private final int value;
+    Level(int value) { this.value = value; }   // implicitly private
+}
+```
+
+### Q23. Can an enum extend a class?
+**Answer: No.** Every enum already extends `java.lang.Enum` internally, and a class can extend only one class, so that slot is taken. This is also why an enum cannot be extended by another class: the compiler makes it final.
+```java
+enum Color extends Base { RED }   // compile error
+```
+
+### Q24. Can an enum implement an interface?
+**Answer: Yes.** Interfaces are free even though the `extends` slot is taken. Each constant can have its own implementation of a method, which gives a clean **strategy pattern** with no if-else chain.
+```java
+interface Op { int apply(int a, int b); }
+enum Operation implements Op {
+    PLUS     { public int apply(int a, int b) { return a + b; } },
+    MINUS    { public int apply(int a, int b) { return a - b; } },
+    MULTIPLY { public int apply(int a, int b) { return a * b; } }
+}
+// Operation.PLUS.apply(2, 3) -> 5
+```
+
+---
+
+## 5. Strings (Q25-Q29)
+
+### Q25. Can we extend the `String` class?
+**Answer: No, because `String` is final.** If we could extend it, someone could override `equals` or `length` and change its behavior. Imagine that object used as a `HashMap` key or in a security check comparing a file path, and everything breaks. `String` is used everywhere in Java, including inside the JVM itself, and making it final keeps it trustworthy.
+```java
+class MyString extends String { }   // error: cannot inherit from final String
+```
+
+### Q26. Can a `String` ever be made mutable?
+**Answer: Yes, using reflection.** A `String` holds a private final byte array, but reflection can reach and modify it directly. The string that other classes share from the pool can then be changed. It shows why reflection is powerful and dangerous at the same time. **From Java 26, the JVM gives a warning when code mutates final fields this way.**
+```java
+String s = "hello";
+Field f = String.class.getDeclaredField("value");
+f.setAccessible(true);   // (added) Java 9+ also needs: --add-opens java.base/java.lang=ALL-UNNAMED
+byte[] bytes = (byte[]) f.get(s);
+bytes[0] = 'J';
+System.out.println("hello");   // prints Jello, the pooled literal itself changed
+```
+
+### Q27. Can two strings with the same content have different references?
+**Answer: Yes.** `String a = "hello"` goes into the string pool. `String b = new String("hello")` creates a brand new object on the heap outside the pool. The content is identical but `a == b` is `false` because they are two different objects. This is why we compare strings with `equals()` and never with `==`.
+```java
+String a = "hello";
+String b = new String("hello");
+System.out.println(a == b);        // false
+System.out.println(a.equals(b));   // true
+```
+
+### Q28. Can `==` ever be true for strings created with `new`?
+**Answer: Yes, if we call `intern()`.** `intern()` checks the pool. If the same content already exists there, it returns the pooled reference instead of our heap object, so both point to the same pool object.
+```java
+System.out.println(new String("hello").intern() == "hello");   // true
+```
+
+### Q29. Can `String.hashCode()` return zero?
+**Answer: Yes.** The empty string always gives zero, and some non-empty strings also return zero, which depends on the hash calculation.
+```java
+System.out.println("".hashCode());           // 0
+System.out.println("f5a5a608".hashCode());   // 0  (added: a known non-empty example)
+```
+
+---
+
+## 6. Immutability (Q30-Q32)
+
+### Q30. Can we create our own immutable class?
+**Answer: Yes.** Four steps: (1) make the class `final`, (2) make all fields `private final`, (3) give no setters, only getters, (4) initialize everything through the constructor. There is a fifth step that people usually forget, covered in the next question.
+```java
+public final class Point {
+    private final int x, y;
+    public Point(int x, int y) { this.x = x; this.y = y; }
+    public int getX() { return x; }
+    public int getY() { return y; }
+}
+```
+
+### Q31. Can an immutable class have a mutable field?
+**Answer: It can, but then the class is no longer truly immutable.** This is the mistake almost everybody makes. `private final List<String>` only means the reference cannot be reassigned, while the list contents can still change. If a getter returns the list directly, the caller can call `add()` on it from outside. The fix (the fifth step) is **defensive copying**: copy the list in the constructor and return a copy or an unmodifiable view from the getter.
+```java
+public final class Team {
+    private final List<String> members;
+    public Team(List<String> members) {
+        this.members = new ArrayList<>(members);               // copy in
+    }
+    public List<String> getMembers() {
+        return Collections.unmodifiableList(members);          // view out
+    }
+}
+```
+
+### Q32. Can an immutable object still break in multithreading?
+**Answer: No.** If the class is truly immutable and all fields are `final`, Java guarantees they are fully visible to other threads once the constructor finishes. This is the **final field guarantee**, and it makes immutable objects thread-safe. *(added: this holds as long as `this` does not escape during construction.)*
+```java
+final class Money {
+    private final long cents;
+    Money(long cents) { this.cents = cents; }   // safe to share between threads once constructed
+}
+```
+
+---
+
+## 7. Exceptions and finally (Q33-Q38)
+
+### Q33. Can we write `try` without `catch`?
+**Answer: Yes, in two ways.** (1) `try-finally`: skip the catch and only write `finally`. The exception still propagates up but our cleanup code runs. (2) `try-with-resources` (Java 7): a resource opened in the try parentheses closes automatically, so no catch is needed. The only thing we can never do is write `try` alone. It must have at least a `catch` or a `finally`.
+```java
+try { work(); } finally { cleanup(); }
+
+try (var in = new FileInputStream("a.txt")) { in.read(); }   // no catch needed (read() still declares IOException, so the method needs throws)
+```
+
+### Q34. Can the `finally` block ever not execute?
+**Answer: Yes, in a few cases.** If `System.exit()` is called inside `try`, the JVM shuts down immediately. If the JVM crashes or the thread is killed. If there is an infinite loop inside `try`, we never leave `try` so we never reach `finally`.
+```java
+try {
+    System.exit(0);
+} finally {
+    System.out.println("never printed");
+}
+```
+
+### Q35. Can `finally` change the value returned by `try`?
+**Answer: Yes, if `finally` has its own `return`.** If `try` returns 1 and `finally` returns 2, the answer is 2. The return in `finally` completely overrides the one from `try`.
 ```java
 static int test() {
     try { return 1; }
     finally { return 2; }
 }
+// test() -> 2
 ```
-**Answer:** `2`. A `return` in `finally` overrides the earlier return and even swallows exceptions. Never return from `finally`.
 
-### Q44. When does `finally` not run?
-**Answer:** When the JVM exits (`System.exit`, `Runtime.halt`), the process is killed, or the thread is stuck in an infinite loop or deadlock before reaching it.
-
-### Q45. How does try-with-resources work?
-**Answer:** Resources implementing `AutoCloseable` are closed automatically in **reverse order** of declaration. If both the body and `close()` throw, the body's exception is primary and the other is attached as a *suppressed* exception (`getSuppressed()`).
-
-### Q46. Checked vs unchecked exceptions?
-**Answer:** Checked (extend `Exception` but not `RuntimeException`) must be caught or declared. Unchecked (`RuntimeException`, `Error`) need not be.
-
-### Q47. Does catch order matter?
+### Q36. Can we throw an exception from the `finally` block?
+**Answer: Yes, but we should not.** If `try` already threw something, the exception from `finally` replaces it and the real cause is lost. This is why **try-with-resources** was designed better: if both the body and `close()` throw, the original exception wins and the other is attached to it as a **suppressed exception**. Nothing gets lost.
 ```java
-try { /* ... */ }
-catch (Exception e) { }
-catch (IOException e) { } // compile error: already caught
+try (Res r = new Res()) {
+    throw new RuntimeException("body");
+} catch (Exception e) {
+    System.out.println(e.getMessage());            // body
+    System.out.println(e.getSuppressed().length);  // 1  (the exception from close())
+}
 ```
-**Answer:** Yes. Catch the more specific subclass first, otherwise the compiler reports it as unreachable.
 
-### Q48. What happens if a static initializer throws?
-**Answer:** The first access throws `ExceptionInInitializerError`. Later accesses to the class throw `NoClassDefFoundError`.
-
-### Q49. Can you catch `StackOverflowError` or `OutOfMemoryError`?
-**Answer:** Technically yes (they are `Throwable`s), but recovery is unreliable. Fix the cause (runaway recursion, leaks) rather than catching.
-
-### Q50. What are the rules of multi-catch?
+### Q37. Can we catch an `Error`?
+**Answer: Yes, but we should not.** `Error` extends `Throwable`, so `catch (Error e)` compiles. An `Error` means the JVM itself is in trouble (`OutOfMemoryError`, `StackOverflowError`) and application code cannot meaningfully recover from it.
 ```java
-try { /* ... */ }
-catch (IOException | SQLException e) { }
+try { recurseForever(); }
+catch (StackOverflowError e) { /* compiles and runs, but recovery is unreliable */ }
 ```
-**Answer:** The alternatives cannot be subclasses of each other, and the catch parameter is implicitly `final`.
+
+### Q38. Can a static block throw an exception?
+**Answer: Unchecked yes, checked never.** A static block has no `throws` clause, so there is nowhere to declare a checked exception. When it throws something, the JVM wraps it in `ExceptionInInitializerError` and the class fails to load. The tricky part: every later attempt to use that class gives `NoClassDefFoundError`, which tells us nothing about the real cause. The real error appeared only once, at the first attempt.
+```java
+class Config {
+    static int value;
+    static { value = 1 / 0; }
+}
+// 1st use of Config -> ExceptionInInitializerError (caused by ArithmeticException)
+// later uses        -> NoClassDefFoundError: Could not initialize class Config
+```
 
 ---
 
-## 5. Collections (Q51-Q66)
+## 8. Collections (Q39-Q48)
 
-### Q51. How does `HashMap` work internally?
-**Answer:** An array of buckets. The index is derived from the key's (spread) hash, `(n - 1) & hash`. Collisions form a linked list, converted to a red-black tree when a bucket reaches 8 entries and the table has at least 64 buckets (otherwise the table resizes). Reverts to a list at 6. Resizes (doubles) when size exceeds capacity x 0.75.
+### Q39. Can `HashMap` store a null key?
+**Answer: Yes. Exactly one null key and any number of null values.** `HashMap` normally calls `hashCode()` on the key to find the bucket, but it cannot do that for null, so there is a special rule: null always goes into **bucket 0**. A map cannot hold duplicate keys, so putting a null key twice just overrides the first.
+```java
+Map<String, Integer> m = new HashMap<>();
+m.put(null, 1);
+m.put(null, 2);
+System.out.println(m.size());       // 1
+System.out.println(m.get(null));    // 2
+```
 
-### Q52. Why is table capacity a power of two?
-**Answer:** So the index can be computed with a fast bitmask `(n - 1) & hash` instead of modulo, and resizing splits buckets cleanly.
+### Q40. Can `ConcurrentHashMap` store a null key or value?
+**Answer: No. It throws `NullPointerException`.** In a single-threaded `HashMap`, if `get()` returns null we can call `containsKey()` to tell whether the key is missing or the value was null. In `ConcurrentHashMap` that check is unreliable because between `get()` and `containsKey()` another thread could have changed everything. So Java removed the ambiguity: null is not allowed, and null always means "not present".
+```java
+Map<String, String> m = new ConcurrentHashMap<>();
+m.put("k", null);   // NullPointerException
+m.put(null, "v");   // NullPointerException
+```
 
-### Q53. What happens if you mutate a key after putting it in a `HashMap`/`HashSet`?
-**Answer:** Its hash changes, so lookups probe the wrong bucket and the entry becomes effectively unreachable. Use immutable keys.
+### Q41. Can two keys with the same hash code both be stored in a `HashMap`?
+**Answer: Yes.** The same hash code does not mean the same key. Both keys land in the same bucket (a **collision**). `HashMap` then compares them with `equals()`, and if `equals()` says they are different, both are stored in that bucket as a linked list. `hashCode()` decides where to look and `equals()` decides what to return.
+```java
+Map<String, Integer> m = new HashMap<>();
+m.put("Aa", 1);
+m.put("BB", 2);                        // "Aa".hashCode() == "BB".hashCode() == 2112
+System.out.println(m.size());          // 2
+```
 
-### Q54. Which maps allow `null`?
-**Answer:** `HashMap`: one null key and null values. `LinkedHashMap`: same. `TreeMap`: no null key (natural ordering). `Hashtable` and `ConcurrentHashMap`: no null keys or values.
+### Q42. Can we use a mutable object as a `HashMap` key?
+**Answer: We can, but we will lose the data.** The map calculates the key's hash and stores it in, say, bucket 5. If we then change a field inside the key, its hash code changes too. A later `get()` with the same object calculates a new hash, goes to bucket 9 and finds nothing. The entry is still in bucket 5 but unreachable forever. That is why `String` is the most popular key: it is immutable so its hash never changes.
+```java
+class Key { int id; Key(int id) { this.id = id; }
+    public int hashCode() { return id; }
+    public boolean equals(Object o) { return o instanceof Key k && k.id == id; } }
 
-### Q55. `HashMap` vs `Hashtable` vs `ConcurrentHashMap` vs `synchronizedMap`?
-**Answer:** `HashMap`: not thread-safe. `Hashtable`: legacy, locks the whole table. `synchronizedMap`: wraps with one lock. `ConcurrentHashMap`: fine-grained, high-concurrency, atomic `compute`/`merge`/`putIfAbsent`. Prefer `ConcurrentHashMap`.
+Map<Key, String> m = new HashMap<>();
+Key k = new Key(5);
+m.put(k, "value");
+k.id = 9;
+System.out.println(m.get(k));   // null, the entry is lost
+```
 
-### Q56. Why does this throw, and when doesn't it?
+### Q43. Can a `HashSet` contain duplicates?
+**Answer: Yes, if we break the contract.** `HashSet` uses `hashCode()` and `equals()` to detect duplicates. If we override `equals()` but not `hashCode()`, two logically equal objects get different hash codes, go to different buckets, and the set never even compares them. Both get stored.
+```java
+class P { String n; P(String n) { this.n = n; }
+    public boolean equals(Object o) { return o instanceof P p && p.n.equals(n); } }   // no hashCode()
+
+Set<P> s = new HashSet<>();
+s.add(new P("a"));
+s.add(new P("a"));
+System.out.println(s.size());   // 2 (almost always)
+```
+
+### Q44. Can we override `equals()` without `hashCode()`?
+**Answer: The compiler allows it, but it breaks our code in every hash-based collection** (`HashMap`, `HashSet`, `Hashtable`). The contract says that if two objects are equal, their hash codes must be equal. Always override both together.
+```java
+@Override public boolean equals(Object o) { /* ... */ }
+@Override public int hashCode() { return Objects.hash(name, id); }   // always add this
+```
+
+### Q45. Can we modify a list while iterating it?
+**Answer: Not with a normal for-each loop, or we get `ConcurrentModificationException`.** The iterator keeps a count called `modCount`. If the list changes by any route other than the iterator itself, the count no longer matches and the iterator fails fast. Correct ways: `Iterator.remove()`, `removeIf()` (Java 8), or `CopyOnWriteArrayList`, whose iterator works on a snapshot.
 ```java
 List<Integer> list = new ArrayList<>(List.of(1, 2, 3, 4));
-for (Integer x : list) {
-    if (x == 2) list.remove(x); // ConcurrentModificationException
+
+for (Integer x : list) { if (x == 2) list.remove(x); }   // ConcurrentModificationException
+
+Iterator<Integer> it = list.iterator();                  // correct
+while (it.hasNext()) { if (it.next() == 2) it.remove(); }
+
+list.removeIf(x -> x == 3);                              // correct, Java 8+
+```
+
+### Q46. Can a `TreeMap` store null keys?
+**Answer: No, for a different reason than `ConcurrentHashMap`.** `TreeMap` keeps everything sorted. To place a key it must compare it with existing keys by calling `compareTo()`, and calling that on null gives `NullPointerException`. So `HashMap` allows a null key but `TreeMap` doesn't, purely because one hashes and the other compares.
+```java
+new TreeMap<String, Integer>().put(null, 1);   // NullPointerException
+```
+
+### Q47. Can a `HashMap` cause an infinite loop?
+**Answer: Yes, but only before Java 8.** If two threads resized a `HashMap` at the same time, the linked list inside a bucket could end up with a circular reference: node A pointing to B and B pointing back to A. After that, any `get()` on that bucket loops forever, CPU hits 100% and the application freezes, with no exception and no error message. Java 8 changed the resize logic to preserve order, so this particular bug is gone. *(added: `HashMap` is still not thread-safe. Use `ConcurrentHashMap` for shared maps.)*
+```java
+// Java 7 and earlier: concurrent put() calls on a plain HashMap could create a cycle in a bucket
+Map<Integer, Integer> shared = new HashMap<>();   // do not share across threads
+```
+
+### Q48. Can `Collections.sort()` throw an exception on valid data?
+**Answer: Yes. The data is fine but our comparator is the problem.** If the comparator is inconsistent (A greater than B, B greater than C, but C greater than A), sorting can fail. Since Java 7, sorting uses **TimSort**, which detects the inconsistency and refuses to continue with `IllegalArgumentException: Comparison method violates its general contract!`. The old algorithm silently produced a wrongly sorted list. The usual cause is a comparator that is not symmetric, or one that **subtracts** and overflows with large numbers.
+```java
+list.sort((a, b) -> a - b);              // wrong: overflows for large or negative values
+list.sort(Integer::compare);             // correct
+list.sort(Comparator.naturalOrder());    // correct
+```
+
+---
+
+## 9. Generics (Q49-Q51)
+
+### Q49. Can we create an array of generics?
+**Answer: No.** Arrays and generics work in opposite ways. An array knows its element type at runtime and checks every element put in it. Generics use **type erasure**, so by that time the type information is gone.
+```java
+List<String>[] a = new List<String>[10];   // compile error: generic array creation
+List<String>[] b = new List[10];           // compiles with an unchecked warning
+List<List<String>> c = new ArrayList<>();  // preferred alternative
+```
+
+### Q50. Can we use primitives with generics?
+**Answer: No.** Again it comes back to erasure. After compilation the generic type becomes `Object`, and a primitive like `int` is not an object. Use the wrapper types.
+```java
+List<int> bad = new ArrayList<>();        // compile error
+List<Integer> ok = new ArrayList<>();     // use the wrapper (autoboxing)
+```
+
+### Q51. Can a `List<String>` be assigned to a `List<Object>`?
+**Answer: No, even though `String` is an `Object`.** If it were allowed, someone could add an `Integer` through the `List<Object>` reference (a valid object after all), and the original code would later read it expecting a `String` and crash. Generics are **invariant** on purpose. For flexibility, use wildcards.
+```java
+List<String> strings = new ArrayList<>();
+List<Object> objects = strings;            // compile error
+
+List<? extends Object> view = strings;     // OK to read from
+```
+
+---
+
+## 10. Threads and synchronization (Q52-Q62)
+
+### Q52. Can we start a thread twice?
+**Answer: No. The second `start()` throws `IllegalThreadStateException`.** A thread has a life cycle (new, runnable, running, dead). Once it is dead it can never go back, and `start()` only works on a thread in the *new* state. To run the same task again, create a new `Thread` object, or better, use a thread pool.
+```java
+Thread t = new Thread(() -> System.out.println("hi"));
+t.start();
+t.start();   // IllegalThreadStateException
+```
+
+### Q53. Can we call `run()` instead of `start()`?
+**Answer: Yes, it compiles, but no new thread is created.** Calling `run()` directly is an ordinary method call and the code executes sequentially on the current thread. Only `start()` asks the JVM to create a new thread, which then calls `run()`.
+```java
+Thread t = new Thread(() -> System.out.println(Thread.currentThread().getName()));
+t.run();     // prints "main"
+t.start();   // prints "Thread-0"
+```
+
+### Q54. Can a dead thread be restarted?
+**Answer: No. Dead is permanent.** Once `run()` finishes, the thread's resources are released and the object can never be started again.
+```java
+Thread t = new Thread(() -> { });
+t.start();
+t.join();
+t.start();   // IllegalThreadStateException, the thread is dead
+```
+
+### Q55. Can `volatile` make `count++` atomic?
+**Answer: No.** This is probably the most important misconception in Java concurrency. `volatile` gives **visibility**: every thread reads the latest value from main memory instead of its own cached copy. But `count++` is three operations (read, add one, write back) and `volatile` does not lock anything. Two threads can read the same value, both add one, and we lose an increment. For atomicity use `AtomicInteger`, `synchronized` or a lock.
+```java
+volatile int count;
+void unsafe() { count++; }                       // not atomic
+
+AtomicInteger counter = new AtomicInteger();
+void safe() { counter.incrementAndGet(); }       // atomic
+```
+
+### Q56. Can two threads enter the same `synchronized` method at once?
+**Answer: Yes, if they work on different objects.** A synchronized method locks the **object**, not the method. Thread 1 on object A and thread 2 on object B run at the same time. They only block each other if it is the same object, or if the method is `static`, because a static synchronized method locks the **class**.
+```java
+class Counter {
+    synchronized void inc() { /* locks "this" */ }
+    static synchronized void sinc() { /* locks Counter.class */ }
+}
+// a.inc() and b.inc() run in parallel for two different objects a and b
+```
+
+### Q57. Can a thread acquire the same lock twice?
+**Answer: Yes. Java locks are re-entrant.** If a synchronized method calls another synchronized method on the same object and locks were not re-entrant, the thread would block waiting for a lock it already holds. The JVM keeps a counter: each acquire increases it, each exit decreases it, and the lock is released only when it reaches zero.
+```java
+class Demo {
+    synchronized void a() { b(); }   // holds the lock on "this"
+    synchronized void b() { }        // takes the same lock again, no deadlock
 }
 ```
-**Answer:** Structural modification during iteration triggers the fail-fast `ConcurrentModificationException`. Quirk: removing the *second-to-last* element does not throw, because `hasNext()` returns false. Use `Iterator.remove()` or `list.removeIf(...)`.
 
-### Q57. What is special about `Arrays.asList` and `List.of`?
+### Q58. Can a constructor be synchronized?
+**Answer: No.** The compiler rejects it, and it is also unnecessary: while a constructor is running, no other thread can access that object because the reference has not been published yet.
 ```java
-List<String> a = Arrays.asList("x", "y");
-a.set(0, "z");  // OK, writes through to the array
-a.add("w");     // UnsupportedOperationException
-List<String> b = List.of("x", "y");
-b.set(0, "z");  // UnsupportedOperationException
-List.of("x", null); // NullPointerException
+class A { synchronized A() { } }   // compile error: modifier synchronized not allowed here
 ```
-**Answer:** `Arrays.asList` is fixed-size and backed by the array. `List.of` is fully immutable and disallows nulls.
 
-### Q58. What does `Arrays.asList(new int[]{1,2,3}).size()` return?
-**Answer:** `1`. Generics don't work with primitives, so the whole `int[]` is a single element of a `List<int[]>`. Use `Integer[]` or `IntStream`.
-
-### Q59. `ArrayList` vs `LinkedList`?
-**Answer:** `ArrayList`: O(1) random access, amortized O(1) append, O(n) middle insert. `LinkedList`: O(1) insert at known node, but O(n) access and poor cache locality. `ArrayList` is usually faster in practice.
-
-### Q60. `list.remove(1)` on a `List<Integer>`?
+### Q59. Can `sleep()` release the lock?
+**Answer: No.** This is the classic `sleep()` vs `wait()` question. `sleep()` pauses the thread but keeps every lock, so other threads needing that lock keep waiting. `wait()` does the opposite: it releases the lock so another thread can proceed, and waits to be notified. That is why `wait()` must be called inside a synchronized block, whereas `sleep()` can be called anywhere.
 ```java
-List<Integer> l = new ArrayList<>(List.of(10, 1, 20));
-l.remove(1);                    // removes index 1 -> [10, 20]
-l.remove(Integer.valueOf(1));   // removes the value 1
+synchronized (lock) {
+    Thread.sleep(1000);   // still holds "lock" for the whole second
+    lock.wait();          // releases "lock" until notify()
+}
 ```
-**Answer:** `remove(int)` takes an index, `remove(Object)` takes a value. The primitive overload is chosen for an `int` argument.
 
-### Q61. `Comparable` vs `Comparator`?
-**Answer:** `Comparable` defines a class's natural order (`compareTo`, one per class). `Comparator` defines external, multiple orderings (`Comparator.comparing(...).thenComparing(...)`).
-
-### Q62. How does `HashSet` ensure uniqueness? And `TreeSet`?
-**Answer:** `HashSet` is backed by a `HashMap` (uses `hashCode`/`equals`). `TreeSet` uses `compareTo`/`Comparator` only: two elements comparing as 0 are considered duplicates even if `equals` says otherwise.
-
-### Q63. How do you build an LRU cache with the JDK?
+### Q60. Can `Thread.interrupt()` actually stop a thread?
+**Answer: No. It only sets a flag.** It is a polite request, not a command. If the thread is inside `sleep()`, `wait()` or `join()`, it gets an `InterruptedException` and can react. If it is busy in a plain loop, nothing happens unless the code itself checks `isInterrupted()`. There is no safe way to forcibly kill a thread in Java. `stop()` existed once and was deprecated because it released locks and left objects in a broken state.
 ```java
-class LRU<K, V> extends LinkedHashMap<K, V> {
-    private final int cap;
-    LRU(int cap) { super(16, 0.75f, true); this.cap = cap; }
-    @Override protected boolean removeEldestEntry(Map.Entry<K, V> e) {
-        return size() > cap;
+Thread t = new Thread(() -> {
+    while (!Thread.currentThread().isInterrupted()) {
+        // do work
     }
+});
+t.start();
+t.interrupt();   // the loop ends only because it checks the flag
+```
+
+### Q61. Can a deadlock happen with only one lock?
+**Answer: Yes.** People assume deadlock always needs two locks, but it doesn't. If a thread holds a lock and calls `wait()` expecting a notification that nobody will ever send, it waits forever.
+```java
+synchronized (lock) {
+    lock.wait();   // no other thread ever calls lock.notify(): stuck forever
 }
 ```
-**Answer:** `LinkedHashMap` with `accessOrder = true` plus `removeEldestEntry`.
 
-### Q64. Is `PriorityQueue` iteration sorted?
-**Answer:** No. It's a binary heap; only `poll()`/`peek()` give the smallest element. Printing or iterating shows heap order.
-
-### Q65. `Iterator` vs `ListIterator` vs `Enumeration`?
-**Answer:** `Iterator`: forward, supports remove. `ListIterator`: bidirectional, supports add/set. `Enumeration`: legacy, read-only.
-
-### Q66. `Collections.unmodifiableList` vs `List.copyOf`?
-**Answer:** `unmodifiableList` is a read-only *view*: changes to the underlying list show through. `List.copyOf` makes an independent immutable copy.
+### Q62. Can we make a `HashMap` thread-safe without `ConcurrentHashMap`?
+**Answer: Yes, with `Collections.synchronizedMap()`.** The wrapper puts one lock around the entire map, so only one thread can touch it at a time, whether reading or writing. `ConcurrentHashMap` locks only the specific bucket being written to, and reads need no lock at all, so multiple threads work in parallel.
+```java
+Map<String, Integer> m = Collections.synchronizedMap(new HashMap<>());
+```
 
 ---
 
-## 6. Generics (Q67-Q70)
+## 11. JVM, garbage collection and memory (Q63-Q67)
 
-### Q67. What is type erasure? What does this print?
-```java
-System.out.println(new ArrayList<String>().getClass()
-                == new ArrayList<Integer>().getClass()); // true
+### Q63. Can a Java app run without the JRE installed?
+**Answer: Yes, from Java 9 with `jlink`.** Earlier, the JRE had to be downloaded and installed on every machine. `jlink` bundles a small custom runtime together with our application, so the application carries its own JVM.
+```bash
+jlink --module-path $JAVA_HOME/jmods --add-modules java.base --output myruntime
+myruntime/bin/java -version
 ```
-**Answer:** Generic type info is erased at compile time (replaced by bounds or `Object`). At runtime both are plain `ArrayList`. It's why `m(List<String>)` and `m(List<Integer>)` clash (same erasure), and why you can't do `new T()` or `instanceof List<String>`.
 
-### Q68. Is `List<Object>` a supertype of `List<String>`?
-**Answer:** No. Generics are invariant. Use wildcards: `List<? extends Number>` to read (producer), `List<? super Integer>` to write (consumer). Rule: **PECS** (Producer Extends, Consumer Super).
-
-### Q69. Why can't you create `new T[10]` or `new List<String>[10]`?
-**Answer:** Arrays are reified and covariant while generics are erased, so the runtime couldn't enforce type safety. Use `List<List<String>>` or `(T[]) new Object[10]` with care.
-
-### Q70. What is heap pollution?
-**Answer:** A variable of a parameterized type refers to an object of a different type, typically through raw types or unchecked casts. It surfaces later as `ClassCastException` far from the cause.
-
----
-
-## 7. Concurrency (Q71-Q84)
-
-### Q71. `start()` vs `run()`? What if you call `start()` twice?
-**Answer:** `start()` creates a new thread that executes `run()`. Calling `run()` directly just executes on the current thread. A second `start()` throws `IllegalThreadStateException`.
-
-### Q72. What does `synchronized` lock on?
-**Answer:** Instance method: `this`. Static method: the `Class` object. Block: the given object. Static and instance synchronized methods use different locks and do not block each other.
-
-### Q73. What does `volatile` guarantee? Is `count++` safe on a volatile int?
-**Answer:** It guarantees visibility and ordering (happens-before) but **not atomicity**. `count++` is read-modify-write, so use `AtomicInteger` or `synchronized`.
-
-### Q74. Why must `wait()`/`notify()` be called inside `synchronized`? Why use a `while` loop?
-**Answer:** They operate on the object's monitor, so the thread must own it (else `IllegalMonitorStateException`). Waiting must be in a `while (!condition)` loop to handle spurious wakeups and missed conditions.
-
-### Q75. `sleep()` vs `wait()`?
-**Answer:** `sleep` pauses the thread and keeps any locks it holds. `wait` releases the monitor and waits for `notify`/`notifyAll` (or timeout).
-
-### Q76. What are the four conditions for deadlock? How do you prevent it?
-**Answer:** Mutual exclusion, hold and wait, no preemption, circular wait. Prevent by acquiring locks in a consistent global order, using `tryLock` with timeouts, or reducing lock scope.
-
-### Q77. Why use `ExecutorService` instead of `new Thread()`? Pitfalls?
-**Answer:** Thread reuse, bounded concurrency, queueing, lifecycle control. Pitfalls: `newFixedThreadPool` uses an unbounded queue (memory risk), `newCachedThreadPool` can create unbounded threads. Prefer a configured `ThreadPoolExecutor`. Always `shutdown()`.
-
-### Q78. `shutdown()` vs `shutdownNow()`?
-**Answer:** `shutdown()` stops accepting tasks but finishes queued ones. `shutdownNow()` attempts to interrupt running tasks and returns the list of tasks that never started.
-
-### Q79. Is `map.get` then `map.put` safe on a `ConcurrentHashMap`?
+### Q64. Can we force garbage collection?
+**Answer: No.** Most people say yes because of `System.gc()`, but that is only a **request**, like asking a friend to please clean the room. The JVM can completely ignore it. There is no API in Java that guarantees garbage collection runs right now.
 ```java
-if (!map.containsKey(k)) map.put(k, v);   // race condition
-map.putIfAbsent(k, v);                    // atomic
-map.merge(k, 1, Integer::sum);            // atomic counter
+System.gc();   // a hint only, the JVM may ignore it
 ```
-**Answer:** No, the two calls are not atomic together. Use the atomic compound methods.
 
-### Q80. What is `ThreadLocal` and what is its pitfall?
-**Answer:** Per-thread variable storage. In thread pools, threads live on, so values leak or leak between requests unless you call `remove()` in a `finally`.
-
-### Q81. `Runnable` vs `Callable`? What does `Future.get()` do?
-**Answer:** `Callable` returns a value and can throw checked exceptions. `Future.get()` blocks until the result is ready. Prefer `CompletableFuture` for non-blocking composition.
-
-### Q82. How do atomic classes work? What is the ABA problem?
-**Answer:** They use hardware compare-and-swap (CAS) in a retry loop (lock-free). ABA: a value changes A to B back to A, so CAS thinks nothing changed. `AtomicStampedReference` adds a version stamp.
-
-### Q83. Why does double-checked locking need `volatile`?
+### Q65. Can two objects that reference each other be garbage collected?
+**Answer: Yes.** Java does not count references, it checks **reachability**. It starts from **GC roots** (the main thread stack, static variables) and asks: can I reach this object from there? If nothing from outside can reach A and B, both become garbage together, even though they hold each other.
 ```java
-class Singleton {
-    private static volatile Singleton inst;
-    static Singleton get() {
-        if (inst == null) {
-            synchronized (Singleton.class) {
-                if (inst == null) inst = new Singleton();
-            }
-        }
-        return inst;
-    }
+class Node { Node other; }
+Node a = new Node(), b = new Node();
+a.other = b;
+b.other = a;
+a = null;
+b = null;     // both are now unreachable and eligible for GC
+```
+
+### Q66. Can an object come back to life after becoming eligible for GC?
+**Answer: Yes. This is called object resurrection.** Before collecting an object the JVM calls its `finalize()` method. If inside `finalize()` we assign `this` to a static variable, the object becomes reachable again. But the JVM calls `finalize()` only once per object, so the second time it becomes garbage there is no escape. *(added: `finalize()` is deprecated for removal in modern Java. This is for interview knowledge, not for production use.)*
+```java
+class Zombie {
+    static Zombie saved;
+    @Override protected void finalize() { saved = this; }   // resurrects the object
 }
 ```
-**Answer:** Without `volatile`, instruction reordering can publish a reference to a partially constructed object. (Alternatives: enum singleton or holder class idiom.)
 
-### Q84. When does the JVM exit? What are virtual threads?
-**Answer:** The JVM exits when all **non-daemon** threads finish (daemon threads are killed). Virtual threads (final in Java 21) are lightweight JVM-managed threads, ideal for large numbers of blocking I/O tasks. Avoid pooling them and be careful with `synchronized` pinning in older versions.
-
----
-
-## 8. JVM, Memory and Class Loading (Q85-Q90)
-
-### Q85. Is Java pass-by-value or pass-by-reference?
+### Q67. Can a memory leak happen even with automatic GC?
+**Answer: Yes.** This is where a lot of production issues come from. GC removes only objects that nobody can reach. If we still hold a reference, GC cannot help, because it thinks we still need the object. Common cases: a static list that keeps growing and is never cleared, listeners registered but never removed, and `ThreadLocal` values in a thread pool where the thread stays alive forever.
 ```java
-static void change(StringBuilder sb, int n) { sb.append("!"); n = 99; sb = null; }
-StringBuilder s = new StringBuilder("hi"); int x = 1;
-change(s, x);
-System.out.println(s + " " + x); // hi! 1
+class Registry {
+    static final List<byte[]> CACHE = new ArrayList<>();
+    static void handle() { CACHE.add(new byte[1_000_000]); }   // grows forever, never cleared
+}
 ```
-**Answer:** Always pass-by-value. For objects, the *reference* is copied: you can mutate the object through it, but reassigning the parameter doesn't affect the caller. A `swap(a, b)` method therefore cannot work.
-
-### Q86. Explain JVM memory areas.
-**Answer:** Heap (objects, shared, GC-managed), thread stacks (frames, locals), Metaspace (class metadata, native memory, replaced PermGen in Java 8), PC registers, native method stacks, code cache (JIT output).
-
-### Q87. `StackOverflowError` vs `OutOfMemoryError`?
-**Answer:** `StackOverflowError`: a thread's stack is exhausted (usually infinite recursion). `OutOfMemoryError`: heap (or Metaspace/native/direct memory) is exhausted.
-
-### Q88. How does garbage collection decide what to free? Does `System.gc()` force it?
-**Answer:** Objects unreachable from GC roots (thread stacks, static fields, JNI refs) are collectable. `System.gc()` is only a hint. Reference types: strong, soft (cleared under memory pressure), weak (cleared at next GC), phantom (post-mortem cleanup).
-
-### Q89. Can Java have memory leaks?
-**Answer:** Yes: objects that are reachable but no longer used, such as growing static collections, unremoved listeners, unclosed resources, `ThreadLocal`s in pools, and inner classes holding outer references.
-
-### Q90. Explain class loading and parent delegation.
-**Answer:** Loaders: Bootstrap, Platform, Application (plus custom). A loader first delegates to its parent and only loads the class itself if the parent can't. This prevents user code from replacing core classes like `java.lang.String`. Classes are initialized lazily on first active use (new, static access, etc.).
 
 ---
 
-## 9. Modern Java (8 to 21) (Q91-Q100)
+## 12. Lambdas, streams, Optional, records and var (Q68-Q75)
 
-### Q91. Why must lambda-captured locals be effectively final?
-**Answer:** Lambdas capture the *value* of locals (which may outlive the stack frame/thread), so the variable must not change. Instance and static fields can be modified.
+### Q68. Can a functional interface have more than one method?
+**Answer: Yes, as long as only one of them is abstract.** It can have any number of `default` and `static` methods. It can also declare public methods of `Object` such as `equals()` and `toString()`, and those don't count either. The best example is `Comparator`: `compare()` is its single abstract method, plus many default and static helpers like `reversed()` and `comparing()`.
+```java
+@FunctionalInterface
+interface Validator {
+    boolean validate(String s);                                   // the one abstract method
+    default Validator and(Validator o) { return s -> validate(s) && o.validate(s); }
+    static Validator notEmpty() { return s -> !s.isEmpty(); }
+    boolean equals(Object o);                                     // Object method, doesn't count
+}
+```
 
-### Q92. Why does reusing a stream fail?
+### Q69. Can a lambda use a non-final local variable?
+**Answer: Only if the variable is effectively final**, meaning we never change it after assigning it (Java 8 onwards, so the `final` keyword is no longer needed). If we modify it anywhere, the lambda won't compile. The reason: a lambda captures the **value** of a local variable, not a reference to it, and the lambda might run later on a different thread after the method has finished and its stack frame is gone. Instance and static variables have no such restriction because they live on the heap.
+```java
+int x = 10;
+Runnable r = () -> System.out.println(x);   // OK, x is effectively final
+x++;                                        // now the lambda above fails to compile
+```
+
+### Q70. Can we reuse a stream?
+**Answer: No.** A stream can be consumed only once. After a terminal operation like `collect()` or `forEach()` the stream is closed, and using it again throws `IllegalStateException: stream has already been operated upon or closed`. If we need it twice, go back to the source and create a fresh stream, or use a `Supplier<Stream<T>>` that builds a new one each time.
 ```java
 Stream<String> s = Stream.of("a", "b");
 s.forEach(System.out::println);
-s.count(); // IllegalStateException: stream has already been operated upon or closed
+s.count();                                   // IllegalStateException
+
+Supplier<Stream<String>> sup = () -> Stream.of("a", "b");
+sup.get().forEach(System.out::println);      // fresh stream each time
+sup.get().count();
 ```
-**Answer:** A stream is single-use. Streams are also lazy: nothing runs until a terminal operation.
 
-### Q93. `map` vs `flatMap`?
-**Answer:** `map` transforms each element 1:1. `flatMap` transforms each element into a stream and flattens the results into one stream (e.g. `List<List<X>>` to `Stream<X>`).
-
-### Q94. `Optional.orElse` vs `orElseGet`?
+### Q71. Can a stream run without a terminal operation?
+**Answer: No, and nothing happens at all.** Intermediate operations like `map`, `filter` and `sorted` are **lazy**: they only build a pipeline. With no terminal operation, the code inside `map` never executes, not even once. This surprises people debugging with `peek()`: they add a print statement and see nothing.
 ```java
-opt.orElse(expensive());     // expensive() ALWAYS runs
-opt.orElseGet(() -> expensive()); // runs only if empty
+Stream.of(1, 2, 3).map(x -> { System.out.println("map " + x); return x * 2; });   // prints nothing
+
+Stream.of(1, 2, 3).map(x -> { System.out.println("map " + x); return x * 2; })
+      .toList();                                                                  // now it runs
 ```
-**Answer:** `orElse` evaluates its argument eagerly. Also: `Optional.of(null)` throws NPE (use `ofNullable`), and don't use `Optional` for fields or parameters.
 
-### Q95. What does `Collectors.toMap` do on duplicate keys?
-**Answer:** Throws `IllegalStateException` (Duplicate key). Pass a merge function: `toMap(k, v, (a, b) -> a)`.
-
-### Q96. `Stream.toList()` vs `Collectors.toList()`?
-**Answer:** `Stream.toList()` (Java 16) returns an unmodifiable list and allows nulls. `Collectors.toList()` makes no guarantee about mutability.
-
-### Q97. What are the pitfalls of parallel streams?
-**Answer:** They use the shared `ForkJoinPool.commonPool()`, so blocking tasks starve other work. They need stateless, non-interfering, associative operations. They are slower for small data or I/O-bound work. Never mutate shared state from them.
-
-### Q98. What is a functional interface?
-**Answer:** An interface with exactly one abstract method (default/static methods don't count), optionally annotated `@FunctionalInterface`. Lambdas and method references target it (`Function`, `Predicate`, `Supplier`, `Consumer`, `Runnable`).
-
-### Q99. What are records and sealed classes?
+### Q72. Can a parallel stream be slower than a sequential one?
+**Answer: Yes, but not always.** A parallel stream splits the data, distributes it across threads, then merges the results. It is bad for small data sets, tiny work per element, sources that are hard to split (like `LinkedList`), and operations that involve I/O or shared state. It works well for a large data set, CPU-heavy work per element, and an easily splittable source like an array or `ArrayList`.
 ```java
-record Point(int x, int y) {}                      // Java 16
-sealed interface Shape permits Circle, Square {}   // Java 17
+List<Integer> big = IntStream.range(0, 10_000_000).boxed().toList();
+big.parallelStream().mapToLong(Integer::longValue).sum();   // good: big, CPU-bound, splittable
 ```
-**Answer:** A record is a concise immutable data carrier with auto-generated constructor, accessors, `equals`, `hashCode`, `toString`. A sealed type restricts which classes may extend it, enabling exhaustive pattern-matching `switch`.
 
-### Q100. What does pattern matching for `switch` look like (Java 21)?
+### Q73. Can an `Optional` itself be null?
+**Answer: Unfortunately, yes.** `Optional<String> name = null;` and then `name.isPresent()` gives `NullPointerException`, the very thing `Optional` was invented to prevent. The rule: never return null from a method that returns `Optional`. Return `Optional.empty()` instead.
 ```java
-static String describe(Object o) {
-    return switch (o) {
-        case Integer i when i > 10 -> "big int " + i;
-        case Integer i             -> "int " + i;
-        case String s              -> "string " + s.length();
-        case null                  -> "null";
-        default                    -> "other";
-    };
+Optional<String> bad = null;
+bad.isPresent();                     // NullPointerException
+
+Optional<String> good = Optional.empty();
+```
+
+### Q74. Can a record be mutable?
+**Answer: The record itself is immutable, but it can still hold a mutable object.** Record fields are `final`, so they can never be reassigned. But if a component is a list, the contents of that list can still be modified by anyone who holds it. The fix is a **compact constructor** that copies the list when the record is created.
+```java
+record Team(String name, List<String> members) {
+    Team {
+        members = List.copyOf(members);   // defensive copy, now truly immutable
+    }
 }
 ```
-**Answer:** `switch` can match on types with guards (`when`), handle `null` explicitly, and is checked for exhaustiveness (especially with sealed types).
+
+### Q75. Can `var` be used as a field type?
+**Answer: No.** `var` works only for **local variables**: inside a method, in a for loop, and in try-with-resources. It cannot be used for fields, method parameters, return types or constructor parameters. A field or method signature is part of the class's public contract and Java wants that contract written explicitly, while a local variable is our own business.
+```java
+class A {
+    var field = 10;                    // error
+    void m(var p) { }                  // error
+    void ok() { var x = 10; }          // OK
+}
+```
 
 ---
 
-## Using this as a repo
+## 13. Singleton, serialization and class loaders (Q76-Q79)
 
-```bash
-git init
-git add README.md
-git commit -m "Add 100 tricky Java interview questions"
-git branch -M main
-git remote add origin https://github.com/<your-username>/java-interview-questions.git
-git push -u origin main
+### Q76. Can a singleton have more than one instance?
+**Answer: Yes. There are four ways to break it.**
+1. **Reflection:** the constructor is private, but `setAccessible(true)` creates a brand new object.
+2. **Serialization:** deserializing gives a fresh object. Fix: add a `readResolve()` method that returns the existing instance.
+3. **Cloning:** if the class implements `Cloneable`, `clone()` gives a second object.
+4. **Multiple class loaders:** each class loader loads its own copy of the class with its own static instance, so one JVM can have two singletons.
+```java
+public class Singleton implements Serializable {
+    private static final Singleton INSTANCE = new Singleton();
+    private Singleton() { }
+    public static Singleton get() { return INSTANCE; }
+    protected Object readResolve() { return INSTANCE; }    // fixes serialization
+}
+
+Constructor<Singleton> c = Singleton.class.getDeclaredConstructor();
+c.setAccessible(true);
+Singleton second = c.newInstance();                        // reflection breaks it
 ```
+*(added: an `enum` singleton is the usual way to defend against reflection and serialization.)*
+
+### Q77. Can a `transient` field still be serialized?
+**Answer: No. That is the entire purpose of `transient`.** On deserialization the field comes back as its default value (null or zero). **But** with custom serialization (`writeObject` and `readObject` methods) we can explicitly write the transient field ourselves. This is used in the JDK: `ArrayList` marks its internal array `transient` and writes only the used elements manually, instead of the whole array with its empty capacity.
+```java
+class User implements Serializable {
+    String name;
+    transient String password;                          // not serialized by default
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        out.writeObject(password);                      // we choose to write it ourselves
+    }
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        password = (String) in.readObject();
+    }
+}
+```
+
+### Q78. Can two classes with the same fully qualified name exist in one JVM?
+**Answer: Yes, if they are loaded by different class loaders.** A class's identity in the JVM is not just its name, it is the **name plus the class loader** that loaded it. So `com.app.User` loaded by loader A and `com.app.User` loaded by loader B are two completely different classes. This is how application servers run multiple applications side by side, each with its own version of the same library.
+```java
+URLClassLoader a = new URLClassLoader(new URL[]{ urlOfJar }, null);
+URLClassLoader b = new URLClassLoader(new URL[]{ urlOfJar }, null);
+Class<?> c1 = a.loadClass("com.app.User");
+Class<?> c2 = b.loadClass("com.app.User");
+System.out.println(c1 == c2);   // false: same name, different classes
+```
+
+### Q79. Can static fields be shared across class loaders?
+**Answer: No.** Each class loader has its own copy of the class and therefore its own static fields. That is why a singleton can exist twice in one JVM, and why a static cache in a shared library does not actually get shared between two applications on the same server. They share only if the same class is loaded by a common **parent** class loader, because of the parent-first delegation model.
+```java
+// c1 and c2 from the previous question are different classes,
+// so c1's static fields and c2's static fields are separate copies.
+```
+
+---
+
+## 14. Production pitfalls (Q80-Q82)
+
+### Q80. Can `ThreadLocal` cause a memory leak?
+**Answer: Yes, and it is one of the most common leaks in real applications.** The `ThreadLocal` map holds the **key as a weak reference** but the **value as a strong reference**. If the `ThreadLocal` key is garbage collected, we are left with an entry whose key is null and whose value is still strongly held. In a thread pool the threads live forever, so those values are never cleaned. *(added: the fix is to always call `remove()` in a `finally` block.)*
+```java
+static final ThreadLocal<byte[]> CTX = new ThreadLocal<>();
+
+void handleRequest() {
+    CTX.set(new byte[1_000_000]);
+    try {
+        // work
+    } finally {
+        CTX.remove();   // always clean up, especially on pooled threads
+    }
+}
+```
+
+### Q81. Can a parallel stream starve our whole application?
+**Answer: Yes, and it is a brilliant production issue.** Every parallel stream in the entire JVM uses the same shared `ForkJoinPool.commonPool()` by default, and its size is the **number of cores minus one**. If one slow parallel stream occupies those threads, every other parallel stream anywhere in the application waits behind it. If someone does blocking I/O inside a parallel stream, those few threads sit idle waiting.
+```java
+list.parallelStream().forEach(x -> callSlowRemoteService(x));   // blocks the shared common pool
+
+ExecutorService pool = Executors.newFixedThreadPool(20);        // (added) better for blocking work
+```
+
+### Q82. Can we disable garbage collection completely?
+**Answer: Yes, with Epsilon GC.** It is a real collector that allocates memory and **never reclaims any of it**. When the heap fills up, the application crashes with `OutOfMemoryError`. Useful for short-lived programs and performance testing.
+```bash
+java -XX:+UnlockExperimentalVMOptions -XX:+UseEpsilonGC -Xmx512m MyApp
+```
+
+---
+
+## Source
+
+- Video: *82 Tricky Java Interview Questions | Most Candidates Get These Wrong*, GenZ Career, https://youtu.be/glsIlGLglzQ
+- The channel offers its own PDF of these questions and an interview preparation kit, linked in the video description.
